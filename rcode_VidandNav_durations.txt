@@ -1,0 +1,70 @@
+#This code calculates differences in durations between navigation times and playback times for each video.
+#Required inputs are a video navigation file and a video durations file.  Notes on creation below.
+#Make sure to chnage file specifications below (lines 9, 10, and 11 below).
+#Written by Evan Dailey November 6, 2015
+
+rm(list = ls())
+library(lubridate)												#Important for difftime below
+
+navfile <- "E:\\June2016\\96ACH05\\96ACH05_VidNav.csv"   	#Video navigation file (created from rcode_vid-nav_working)
+dursfile <- "E:\\June2016\\96ACH05\\media\\durs.txt"		#Video duration file - created by ffmpeg .bat file: 
+															#for %%a in ("*.mp4") do ffmpeg -i "%%a" 2>&1 | find "Duration"
+															#Should be formatted as "filename.mp4,##:##:##", one file per line, no header
+															
+outfile <- "E:\\June2016\\96ACH05\\navdurs.csv"				#Contains records for file, nav duration, vid duration and differences between durations
+
+dat <- read.csv(file = navfile, header = T, sep = ",")
+dat <- dat[order(dat[,1]),]
+datdur <- read.csv(file = dursfile, header = F, sep = ",")
+datdur <- datdur[order(datdur[,1]),]
+dat$TIME <- as.POSIXct(strptime(dat$TIME, "%H:%M:%S"), tz = "GMT")
+dat$TIME <- format(dat$TIME, format = "%H:%M:%S")
+
+vid <- unique(dat[,1])
+len <- length(vid)
+len1 <- length(datdur[,1])
+if (len != len1){
+	cat("Error: number of videos in navigation and durations file do not match; Navigation has", len, "videos, durations has", len1, "videos")
+}
+
+durs <- data.frame(vid = unique(vid), seconds = rep(NA,len))				#Create an empty dataframe to put results of for loop 
+
+#Calculates the length, in seconds(based on time values), of each video
+i <- 1
+for (i in 1:len){															
+	max <- max(dat[,2][dat[,1]==vid[i]])
+	min <- min(dat[,2][dat[,1]==vid[i]])
+	diff <- period_to_seconds(hms(max)) - period_to_seconds(hms(min))
+	durs[i,2] <- diff
+}
+
+#These two lines convert seconds to hh:mm:ss
+durs$NavDuration <- seconds_to_period(durs$seconds)							
+durs$NavDuration <- sprintf('%02d:%02d:%02d', durs$NavDuration@hour, minute(durs$NavDuration), second(durs$NavDuration))
+#Converts times to R time object
+durs$NavDuration <- as.POSIXct(strptime(durs$NavDuration, "%H:%M:%S"), tz = "GMT")	
+
+durs <- durs[order(vid),]
+
+durs$VidDuration <- datdur[,2]												#Adds the video duration from ffmpeg file
+durs$VidDuration <- as.POSIXct(strptime(durs$VidDuration, "%H:%M:%S"), tz = "GMT")
+
+durs$TimeDifference <- difftime(durs$NavDuration, durs$VidDuration)			#Calculates the difference in times
+
+durs$NavDuration <- format(durs$NavDuration, format = "%H:%M:%S")			#Takes date out of time format after calculating difference
+durs$VidDuration <- format(durs$VidDuration, format = "%H:%M:%S")
+
+durs$seconds <- NULL														#Removes "seconds" column; not needed in final output
+
+write.table(x = durs, file = outfile, sep = ",", row.names = FALSE)
+
+cat("Range of time differences:", range(durs$TimeDifference))
+
+cat("Maximum time difference is:", max(abs(durs$TimeDifference)))
+
+print("Done")
+
+
+
+
+

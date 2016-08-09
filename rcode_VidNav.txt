@@ -1,0 +1,77 @@
+#***IMPORTANT***:Before running the script, change a few things:  times and nav files (lines 13 and 15), WD (line 17), CID (line 19) and fname (line 21)
+#Have WD organized with one folder for each survey.  
+#Each survey folder needs to have a navigation csv file named <survey number>_nav.csv
+#and a video times csv file named <survey number>.csv
+#Navigation file should have columns Latitude, Longitude, Hours, Minutes, Seconds, JulianDay, Year, CruiseID 
+#(with those exact names, should come out that way from Seth's hypac parsing python script)
+#Video times file should have columns "FILE NAME", "START TIME", "END TIME", "START JD", "END JD", "YEAR", and others are okay, but need at least those with those exact names.
+#Video times files should have times formatted as HH:MM:SS 
+#Written by Evan Dailey November 2015
+
+rm(list = ls())
+#Specify csv with video start and end times
+times <- read.csv(file = "E:\\June2016\\96ACH05\\96ACH05_VidTimes.csv", header = T, sep = ",")
+#Specify csv with navigation
+nav <- read.csv(file = "E:\\June2016\\96ACH05\\96ACH05_nav.csv", header = T, sep = ",")
+#Working directory for files
+WD <- "E:\\June2016\\96ACH05"    
+#Enter the cruise ID to go in output file
+CID <- "96ACH05"			
+#Enter file name with extension (in quotes) for final output file.
+fname <- "96ACH05_VidNav.csv"                               
+
+setwd(WD)  
+
+library(dplyr)
+
+nav <- unique(nav)
+
+#######################################################################################
+#This part deals with time formatting to make nav file and video times file compatible.
+times$time <- paste(times$YEAR, times$START.JD, times$START.TIME, sep = ":")
+times$END <- paste(times$YEAR, times$END.JD, times$END.TIME, sep = ":")
+times$time <- as.POSIXct(times$time, format = ("%Y:%j:%T"))
+times$END <- as.POSIXct(times$END, format = ("%Y:%j:%T"))
+
+nav$HH.MM.SS <- paste(nav$Hours, nav$Minutes, nav$Seconds, sep = ":")
+nav$time <- paste(nav$Year, nav$JulianDay, nav$HH.MM.SS, sep = ":")
+nav_time <- nav$time			#Times when navigation was recorded
+nav$time <- as.POSIXct(nav$time, format = ("%Y:%j:%T"))
+
+#######################################################################################
+#This chunk of code finds a sequence of times, by second, for each video file, based on start and end times.
+i <- 1
+seqs <- data.frame("time" = NULL, "file" = NULL)
+for (i in i:nrow(times)){
+	seq1 <- seq(from = times$time[i], to = times$END[i], by = "sec")
+	seqs <- rbind(seqs, data.frame(seq1, times$FILE.NAME[i]))
+	#seqs <- cbind(seqs, rep(times$FILE.NAME[i], times = length(seq1)))
+	}
+names(seqs) <- c("time", "file")
+head(seqs)
+
+#######################################################################################
+#Joins the times and nav data
+boom <- left_join(seqs, nav)
+tm <- strftime(boom$time, format = "%H:%M:%S")
+dt <- strftime(boom$time, format = "%m/%d/%Y")
+vidnav <- data.frame(boom$file, tm, dt, boom$Latitude, boom$Longitude, CruiseID = rep(CID, nrow(boom)))
+names(vidnav) <- c("FILE", "TIME", "DATE", "LATITUDE", "LONGITUDE", "CRUISE_ID")
+
+
+yar <- sort(unique(vidnav$FILE))
+ummm <- sort(unique(times$FILE))
+
+cat("Number of videos:", length(ummm))
+
+cat("Number of videos with navigation:", length(yar))
+
+vidnav <- na.omit(vidnav)
+write.csv(x = vidnav, file = fname, row.names = FALSE) 
+
+print("Done")
+
+
+
+
+
