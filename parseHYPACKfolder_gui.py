@@ -1,35 +1,23 @@
-#from http://www.zetcode.com/gui/tkinter/layout/
-#making mods to attach commands to button
-#right now this won't work in Python 2.5 because of ttk
-#but I think I can get rid of that
-#v2
-#starting to zero in on some formatting, so I need
-#to delete some comments because it's confusing me.
-#this is the equivalent of parse_hypack_folder.py
-#in D:\edrive\python\SEABOSS_june2009
-#original working filename:
-#tkinter_grid2_vac_v4.py
-#in: D:\edrive\python\TKinter\test\grid
-"""
-ZetCode Tkinter tutorial
+#This code was originally written by VeeAnn Cross (USGS)
+#and is based on the SEABOSS tool parse_hypack_folder.py
+#The GUI code based on the Tkinter tutorial from: http://www.zetcode.com/gui/tkinter/layout/
+#modified 7/30/2013 
+#to sort the output and closed a file that was left open
+#removed the intialdir so the code starts where the code is located.
+#modified 8/27/13
+#-this modification is to allow it to process all files in a folder
+#-the user needs to make sure all the files are actually HYPACK files
+#-it will run a whole folder if file extensions is written as *
+#-note: julian day comes from TND calculation, not filename. 
+#modified 8/22/2016 - sda
+#cleaning up the code for methods doc to accompany the CMGP Vid/Photo Portal
+#this code was tested and worked on a Mac OSX 10.10 using Python 2.7.12
 
-In this script, we use the grid
-manager to create a more complicated
-layout.
-
-author: Jan Bodnar
-last modified: December 2010
-website: www.zetcode.com
-"""
-
-#from Tkinter import Tk, Text, BOTH, W, N, E, S
-#from ttk import Frame, Button, Label, Style
 from Tkinter import *
 import tkFileDialog
 import tkMessageBox
 import sys, string, time
 import glob, os
-
 
 class Example(Frame):
   
@@ -44,18 +32,8 @@ class Example(Frame):
         
       
         self.parent.title("Parse HYPACK Navigation Folder")
-        #commented out next two lines because no ttk in python 2.5
-        #self.style = Style()
-        #self.style.theme_use("default")
         self.pack(fill=BOTH, expand=1)
 
-        #next 4 lines are the original coding
-        #self.columnconfigure(1, weight=1)
-        #self.columnconfigure(4, pad=7)
-        #self.rowconfigure(3, weight=1)
-        #self.rowconfigure(5, pad=1)
-        #self.rowconfigure(9, pad=1)
-        #my attempts
         self.rowconfigure(0, weight=1)
         self.rowconfigure(1, weight=1)
         self.rowconfigure(2, weight=1)
@@ -76,11 +54,9 @@ class Example(Frame):
         self.columnconfigure(0, weight=1, pad=1)
         self.columnconfigure(1, weight=1, pad=1)
         self.columnconfigure(2, weight=1, pad=1)
-        #self.columnconfigure(3, weight=1, pad=5)
-        #self.columnconfigure(4, weight=1, pad=5)
 
-        junk = "junk test"
-        junk2 = "Junk test 2"                     
+        junk = "HYPACK folder"
+        junk2 = "output file"                     
         
         lbl = Label(self, text="Input")
         lbl.grid(sticky=W, pady=4, padx=5)
@@ -146,33 +122,26 @@ class Example(Frame):
 
     def getHYPACKFolder(self):
         #HYPfolder = tkFileDialog.askdirectory(initialdir="F:/", title='PickHYPACK')
-        HYPfolder = tkFileDialog.askdirectory(initialdir="C:/", title='PickHYPACK')
-        #need to clear anything that's there
+        #HYPfolder = tkFileDialog.askdirectory(initialdir="C:/", title='Pick HYPACK folder')
+        #by not specifying an intial directory, it starts where the script is located.
+        HYPfolder = tkFileDialog.askdirectory(title='Pick HYPACK folder')
+
         self.entryLabel2.delete(0,END)
         if len(HYPfolder) > 0:
             print "now read HYPACK folder %s" % HYPfolder
-            #self.entryLabel2.config(text=HYPfolder)
-            #this took forever to get to work. I had to add the self. to the entryLabel2
-            #and then the self here. without it in both places - no go.
+
             #for entry widget
             self.entryLabel2.insert(0,HYPfolder)
 
     def saveHYPtext(self):
-        HYPtext = tkFileDialog.asksaveasfilename(initialfile="parsed.txt", title='Save HYPACK Parsed file')
+        HYPtext = tkFileDialog.asksaveasfilename(initialfile="parsedHYP.txt", title='Save HYPACK Parsed file')
         print HYPtext
-        #need to clear anything that's there
         self.outLabel2.delete(0,END)
-        #from when it was just a lable
-        #self.outLabel2.config(text=HYPtext)
+
         self.outLabel2.insert(0,HYPtext)
-        #if HYPtext:
-            #print "now writing file %" % str(HYPtext)
-            #self.outLabel2.config(str(HYPtext))
-            #return open(filename, 'w')
-            #return HYPtext
+
 
     def ParseHYPACK(self):
-        #first think I need to do is make sure nothing is blank, but haven't coded that yet
         navfolder = self.entryLabel2.get()
         fileext = self.txtFileExtension.get()
         parsefile = self.outLabel2.get()
@@ -186,26 +155,46 @@ class Example(Frame):
         print cruiseID
         print inputext
         print rawtext
-        #listing = os.listdir(navfolder)
-        #for infile in glob.glob(os.path.join(navfolder,inputext)):
-        #    print "current file is: " + infile
-        #now that I've populated my variables, I'm pretty much just going to grab from my other code.
+
         output = open(parsefile,"w")
+        tempfolder = "c:/temp/"
+        if os.path.exists(tempfolder):
+            usetmpfolder = tempfolder
+        else:
+            usetmpfolder = tkFileDialog.askdirectory(initialdir="C:/", title='Pick temporary folder')
+        tmpfile = "hypjunk.txt"
+        skpfile = "skippedfiles.txt"
+
+        #to make a normal windows path with all the slashes going the same way
+        tempfile = os.path.normpath(os.path.join(usetmpfolder, tmpfile))
+        skipfile = os.path.normpath(os.path.join(usetmpfolder, skpfile))
+        print tempfile
+        outtemp = open(tempfile, "w")
+        outskip = open(skipfile,"w")
+        
         newline = "\n"
-        output.writelines("Latitude, Longitude, Hours, Minutes, Seconds, JulianDay, Year, CruiseID")
+        #output.writelines("Latitude, Longitude, Hours, Minutes, Seconds, JulianDay, Year, CruiseID")
+        #modified 8/27/13 to add prefix filename
+        output.writelines("Latitude, Longitude, Hours, Minutes, Seconds, JulianDay, Year, CruiseID, file")
         output.writelines(newline)
-        #had to completely redo this next part about getting the files
-        #list. I have no idea why what I have in the other program
-        #works at all - in ArcGIS or otherwise.
+
         for infile in glob.glob(os.path.join(navfolder,inputext)): # in navfolder:
             dir_name, file_name=os.path.split(infile)
             nav_name, nav_ext=os.path.splitext(file_name)
             file=open(infile,"r")
             #print file
+            count = 0
             while 1:
                 line = file.readline()
+                count = count + 1
                 word = line.split()
                 if not line: break
+                if count == 1:
+                    if line[0:3] <> "FTP":
+                        print line[0:3]
+                        print "not a hypack file"
+                        outskip.write("%s%s" % (file_name, newline))
+                        break        
 
                 #grab TND to calculate Julian day
                 if line[0:3] == "TND":
@@ -217,7 +206,7 @@ class Example(Frame):
 
                 #the next if clause will grab lat, long, and time from the RAW string
                 #have to account for different longitude character length
-                #alo had to modify this to take RAW as input as this
+                #also had to modify this to take RAW as input as this
                     #cruise had 2 gps systems on board
                 if line[0:5] == rawtext:
                      latitude = word[4]
@@ -295,9 +284,34 @@ class Example(Frame):
                              longdeg = string.atof(word[5][3:13])
                              longdeg2 = longdeg/6000
                              longdeg3 = longi + longdeg2
-                     output.write("%f, %f, %i, %i, %i, %s, %i, %s%s" % (latdeg3, longdeg3, hour, minute, sec, time2, year, cruiseID, newline))
+                     #output.write("%f, %f, %i, %i, %i, %s, %i, %s%s" % (latdeg3, longdeg3, hour, minute, sec, time2, year, cruiseID, newline))
+                     #writing to a temporary file that I will then sort based on julian day and time
+                     #outtemp.write("%f, %f, %i, %i, %i, %s, %i, %s%s" % (latdeg3, longdeg3, hour, minute, sec, time2, year, cruiseID, newline))
+                     #added 8/27/13 to write filename
+                     outtemp.write("%f, %f, %i, %i, %i, %s, %i, %s, %s%s" % (latdeg3, longdeg3, hour, minute, sec, time2, year, cruiseID, file_name, newline))
                      #print nav_name
+            #this is the break line, so I want to reset my counter since the whole file has been read
+            count = 0         
+        outtemp.close()
+        #outtemp.open('r')
+        #with open(outtemp) as info:
+        #    file_sorted = sorted((ast.literal_eval(x) for x in f), key=lambda z:(int(z[5]),z[2],z[3],z[4]))
+        #the sorting based on:
+        #http://www.daniweb.com/software-development/python/threads/142829/sort-by-column-im-stumped
+        unsorted_data = open(tempfile,'r')
+        data_list = []
+        data_list = [line.strip() for line in open(tempfile)]
+
+        data_list.sort(key=lambda line: (int(line.split(",")[5]),int(line.split(",")[2]),int(line.split(",")[3]),int(line.split(",")[4])))
+
+        #output.write(file_sorted)
+        #output.write('\n'.join(data_list))
+        #the list writing based on:
+        #http://stackoverflow.com/questions/899103/python-write-a-list-to-a-file
+        output.writelines( "%s\n" % item for item in data_list )
+        #output.write("testing writing")
         output.close()
+        unsorted_data.close()
         tkMessageBox.showinfo("HYPACK Parse", "Done")
 
 def main():
