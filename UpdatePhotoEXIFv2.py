@@ -1,46 +1,50 @@
-#-Guilherme H. Polo Goncalves
-#http://tkinter.unpythonic.net/wiki/GridLayout
- 
-from Tkinter import Tk, Button, Checkbutton, Label, Entry, Frame, IntVar, StringVar, Text, Radiobutton, END
-import tkFileDialog
-import sys, glob, os
-import string
-#need the next import so I can run an external command
-import subprocess
+#This code was originally created by VeeAnn Cross (USGS)
+#and is based on the code from the script MCZM_writeexif_2_readfile.py
+#Portions of this script was derived Tkinter hints from: 
+#Guilherme H. Polo Goncalves -- http://tkinter.unpythonic.net/wiki/GridLayout
+#
 #format of input information
-#	the image filename (including extension)must be in a field by itself (no path)
-#	lat and long are assumed to be floating point, numbers only
-#	time is expected to be hh:mm:ss
-#	date is expected to be either YYYYMMDD or YYYY:MM:DD
-#	the text file containing the information can have a header line
-#	works with python 2.7.3
+#   the image filename (including extension) must be in a field by itself (no path)
+#   lat and long are assumed to be floating point, numbers only
+#   time is expected to be hh:mm:ss
+#   date is expected to be either YYYYMMDD or YYYY:MM:DD
+#   the text file containing the information can have a header line
+#   works with python 2.7.3
+#
 #modified 12/31/13
 #   trying to allow for multiple forms of the yeardate; YYYY:MM:DD or YYYYMMDD, but
 #   still require year, month and day
 #modified 1/9/14
-#	copied grid_manager_veeann_b.py from D:\edrive\python\TKinter\test\jpeg_writeexif
-#	renamed file and will make edits specific to Jane's needs
-#modified 1/6/15
-#   editing for Brian Andrews pub
-#to do
-#   right now you can't have a header line in the photo location file. I'd like
-#       to modify the code so the user can have a check box as to whether or not
-#       their input file has a header line or not, and have the code work accordingly.
+#   copied grid_manager_veeann_b.py from D:\edrive\python\TKinter\test\jpeg_writeexif
 #modified 2/24/15
-#	modified the code so there is a check box to allow a header line. I think I had done
-#	this a while ago, but forgot to carry it over. Found an exmaple in:
-#	D:\edrive\python\TKinter\test\jpeg_writeexif\grid_manager_veeann_bSeth.py
-#       Also allows more date format options: YYYYMMDD, YYY:MM:DD, or MM/DD/YYYY
+#   modified the code so there is a check box to allow a header line. 
+#   Also allows more date format options: YYYYMMDD, YYY:MM:DD, or MM/DD/YYYY
 #modified 4/21/15
-#   trying to get it to work with Mac OSX. I used Seth's version that worked with his
-#   Mac, but it wouldn't work on Windows. What I read online said os.system is the old
-#   way and to use subprocess.call...
-#   But I found a site that suggested to set shell=True for Macs. found this on
+#   trying to get it to work with Mac OSX.  
+#   set shell=True for Macs. found this on
 #   http://stackoverflow.com/questions/23258660/subprocess-call-fails-on-mac-and-linux
-#   still works on Windows. Actually, I like it better because it doesn't open any cmd
-#   windows. Seth will have to test it on his Mac.
+#   still works on Windows. Will have to test it on  Mac.
 #modified 5/22/15
 #   trying to get it to read the "changing" elements from a parameters text file.
+#modified 9/1/2016 - sda
+#  cleaning up the code for methods doc to accompany the CMGP Vid/Photo Portal
+#  origial script called MCZM_writeexif_2_readfile.py, 
+#  cleaned script is called UpdatePhotoEXIFv2.py 
+#  requires that exiftools be installed on the system
+#  this script will look for a params file (specified in the GUI) that contains the exiftool commands
+#     for the comment, keyword, Caption, Caption-Abstract, and ImageDescription exif tags
+#  other exif tags such as Credit, Copyright, CopyrightNotice are hardcoded into the code below
+#  exif tags for the date, time, and GPS data are populated from info in the EXIF csv file 
+#     and defined in the GUI interface
+#  this code was tested and worked on a Mac OSX 10.10 using Python 2.7.12
+
+from Tkinter import Tk, Button, Checkbutton, Label, Entry, Frame, IntVar, StringVar, Text, Radiobutton, END
+import tkFileDialog
+import sys, glob, os
+import string
+#import subprocess to run an external command
+import subprocess
+
 
 class App:
     def __init__(self, master):
@@ -382,13 +386,13 @@ class App:
                     vlonref = 'W'
 ##                print str(vlatref)
 ##                print str(vlonref)
-                cmd = "exiftool.exe -GPSDateStamp=" + vgpsdate + " -GPSTimeStamp="+vgpstime+" -GPSLatitude="+vlat+" -GPSLatitudeRef="+ vlatref+\
+                cmd = "exiftool -GPSDateStamp=" + vgpsdate + " -GPSTimeStamp="+vgpstime+" -GPSLatitude="+vlat+" -GPSLatitudeRef="+ vlatref+\
                       " -GPSLongitude="+vlon+" -GPSLongitudeRef="+vlonref+" "+ " -Artist=" +vartistquotes +" "+fullimg
                 print cmd
                 #print "made it past first os.system"
                 subprocess.check_call(cmd, shell=True)
                 print "executed"
-                cmd2 = """exiftool.exe -Credit="U.S. Geological Survey" -Contact="WHSC_data_contact@usgs.gov " """+ fullimg
+                cmd2 = """exiftool -Credit="U.S. Geological Survey" -Contact="WHSC_data_contact@usgs.gov " """+ fullimg
                 subprocess.check_call(cmd2, shell=True)
 
                 #jpeg comment
@@ -396,15 +400,11 @@ class App:
                 cmd3=allreturns[0]
                 cmd3new = cmd3+" "+fullimg
                 print cmd3new
-                #cmd3 = """exiftool -comment="Photo from down-looking camera on the USGS SEABOSS deployed from the R/V Rafael during survey 2012-003-FA (http://woodshole.er.usgs.gov/operations/ia/public_ds_info.php?fa=2012-003-FA). Released as part of publication DOI:10.3133/ds937. " """+ fullimg
                 #print cmd3
                 #cmd3 = """exiftool -comment="Photo from down-looking camera on the USGS SEABOSS deployed from the R/V Rafael during survey 2012-003-FA (http://woodshole.er.usgs.gov/operations/ia/public_ds_info.php?fa=2012-003-FA). Released as part of publication DOI:10.3133/ds937. " """+ fullimg
-                #cmd3 = """exiftool -comment="Photo from down-looking camera on the USGS SEABOSS deployed from the R/V Rafael during survey 2013-014-FA (http://woodshole.er.usgs.gov/operations/ia/public_ds_info.php?fa=2013-014-FA). Released as part of publication DOI:10.3133/ds937. " """+ fullimg
                 subprocess.check_call(cmd3new, shell=True)
                 #iptc info
                 #cmd4 = """exiftool -sep ", " -keywords="Barnegat Bay, New Jersey, 2012-003-FA, SEABOSS, sea floor, USGS " """+ fullimg
-                #cmd4 = """exiftool -sep ", " -keywords="Narragansett Bay, Rhode Island, 2014-046-FA, SEABOSS, sea floor, USGS " """+ fullimg
-                #cmd4 = """exiftool -sep ", " -keywords="Little Egg Haror, Barnegat Bay, New Jersey, 2013-030-FA, SEABOSS, sea floor, USGS " """+ fullimg
                 cmd4=allreturns[1]
                 cmd4new = cmd4+" "+fullimg
                 #subprocess.check_call(cmd4, shell=True)
@@ -413,32 +413,26 @@ class App:
 
                 #xmp info
                 #cmd6 = """exiftool -Caption="Photograph of the sea floor in Barnegat Bay, New Jersey from survey 2012-003-FA " """+ fullimg
-                #cmd6 = """exiftool -Caption="Photograph of the sea floor in Barnegat Bay, New Jersey from survey 2013-014-FA " """+ fullimg
-                #cmd6 = """exiftool -Caption="Photograph of the sea floor in Little Egg Harbor in Barnegat Bay, New Jersey from survey 2013-030-FA " """+ fullimg
                 cmd6=allreturns[2]
                 cmd6new = cmd6+" "+fullimg                
                 #subprocess.check_call(cmd6, shell=True)
                 subprocess.check_call(cmd6new, shell=True)
                 print "did caption"
                 #EXIF info
-                cmd7 = """exiftool.exe -Copyright="Public Domain - please credit U.S. Geological Survey " """ + fullimg
+                cmd7 = """exiftool -Copyright="Public Domain - please credit U.S. Geological Survey " """ + fullimg
                 subprocess.check_call(cmd7, shell=True)
                 print "did copyright"
                 #iptc info
-                cmd8 = """exiftool.exe -CopyrightNotice="Public Domain - please credit U.S. Geological Survey " """ + fullimg
+                cmd8 = """exiftool -CopyrightNotice="Public Domain - please credit U.S. Geological Survey " """ + fullimg
                 subprocess.check_call(cmd8, shell=True)
                 #iptc info
                 #cmd9 = """exiftool -Caption-Abstract="Photograph of the sea floor in Barnegat Bay, New Jersey from survey 2012-003-FA " """+ fullimg
-                #cmd9 = """exiftool -Caption-Abstract="Photograph of the sea floor in Barnegat Bay, New Jersey from survey 2013-014-FA " """+ fullimg
-                #cmd9 = """exiftool -Caption-Abstract="Photograph of the sea floor in Little Egg Harbor in Barnegat Bay, New Jersey from survey 2013-030-FA " """+ fullimg
                 cmd9=allreturns[3]
                 cmd9new = cmd9+" "+fullimg                 
                 #subprocess.check_call(cmd9, shell=True)
                 subprocess.check_call(cmd9new, shell=True)
                 #exif info - software such as Picasso use this as the caption
                 #cmd10 = """exiftool -ImageDescription="Photograph of the sea floor in Barnegat Bay, New Jersey from survey 2012-003-FA " """+ fullimg                
-                #cmd10 = """exiftool -ImageDescription="Photograph of the sea floor in Barnegat Bay, New Jersey from survey 2013-014-FA " """+ fullimg
-                #cmd10 = """exiftool -ImageDescription="Photograph of the sea floor in Little Egg Harbor in Barnegat Bay, New Jersey from survey 2013-030-FA " """+ fullimg
                 cmd10=allreturns[4]
                 cmd10new = cmd10+" "+fullimg                
                 #subprocess.check_call(cmd10, shell=True)
